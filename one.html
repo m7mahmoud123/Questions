@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Display Questions</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            background: #f4f7f6;
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            color: #333;
+        }
+
+        .container {
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            max-width: 800px;
+            width: 100%;
+            margin: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #0056b3;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            font-weight: 600;
+        }
+
+        .question-item {
+            border: 1px solid #e1e1e1;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            background: #fafafa;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+
+        .question-item strong {
+            color: #333;
+            font-size: 1.5em;
+        }
+
+        .question-item p {
+            margin: 10px 0;
+            font-size: 1.2em;
+            color: #555;
+        }
+
+        .delete-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #dc3545;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+
+        .delete-btn:hover {
+            background: #c82333;
+        }
+
+        .reply-section {
+            margin-top: 15px;
+        }
+
+        .reply-input {
+            width: calc(100% - 120px);
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-right: 10px;
+            font-size: 1em;
+        }
+
+        .reply-btn {
+            background: #007bff;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+        }
+
+        .reply-btn:hover {
+            background: #0056b3;
+        }
+
+        .replies {
+            margin-top: 15px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #f9f9f9;
+        }
+
+        .reply-item {
+            border-bottom: 1px solid #ddd;
+            padding: 5px 0;
+        }
+
+        .reply-item:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Submitted Questions</h1>
+        <div id="questionsList"></div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getDatabase, ref, get, set, remove, push } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCp8_DNF8OrzBw3gYwxb_VGRGXlzGPSHTU",
+            authDomain: "questions-f3722.firebaseapp.com",
+            projectId: "questions-f3722",
+            storageBucket: "questions-f3722.appspot.com",
+            messagingSenderId: "508624461815",
+            appId: "1:508624461815:web:aa8a49751c9b9fb44698f2"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        function displayQuestions(questions) {
+            const questionsList = document.getElementById("questionsList");
+            questionsList.innerHTML = ''; // Clear previous content
+
+            Object.keys(questions).forEach(key => {
+                const questionItem = document.createElement('div');
+                questionItem.className = 'question-item';
+                questionItem.innerHTML = `
+                    <button class="delete-btn" data-key="${key}">Delete</button>
+                    <strong>${questions[key].name}:</strong>
+                    <p>${questions[key].question}</p>
+                    <div class="replies">
+                        ${questions[key].replies ? Object.values(questions[key].replies).map(reply =>
+                    `<div class="reply-item">${reply}</div>`
+                ).join('') : '<p>No replies yet.</p>'}
+                    </div>
+                    <div class="reply-section">
+                        <input type="text" class="reply-input" placeholder="Your reply" data-key="${key}">
+                        <button class="reply-btn" data-key="${key}">Reply</button>
+                    </div>
+                `;
+                questionsList.appendChild(questionItem);
+            });
+
+            // Attach event listeners for delete and reply buttons
+            document.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.addEventListener('click', deleteQuestion);
+            });
+
+            document.querySelectorAll('.reply-btn').forEach(btn => {
+                btn.addEventListener('click', replyToQuestion);
+            });
+        }
+
+        function deleteQuestion(event) {
+            const key = event.target.getAttribute('data-key');
+            remove(ref(db, 'questions/' + key)).then(() => {
+                get(ref(db, 'questions/')).then((snapshot) => {
+                    if (snapshot.exists()) {
+                        displayQuestions(snapshot.val());
+                    } else {
+                        document.getElementById("questionsList").innerHTML = '<p>No questions found.</p>';
+                    }
+                });
+            }).catch((error) => {
+                console.error('Error deleting data: ', error);
+            });
+        }
+
+        function replyToQuestion(event) {
+            const key = event.target.getAttribute('data-key');
+            const replyInput = document.querySelector(`.reply-input[data-key="${key}"]`);
+            const reply = replyInput.value.trim();
+
+            if (reply) {
+                const repliesRef = ref(db, `questions/${key}/replies`);
+                const newReplyRef = push(repliesRef);
+                set(newReplyRef, reply).then(() => {
+                    replyInput.value = ''; // Clear the input after replying
+                    get(ref(db, 'questions/')).then((snapshot) => {
+                        if (snapshot.exists()) {
+                            displayQuestions(snapshot.val());
+                        } else {
+                            document.getElementById("questionsList").innerHTML = '<p>No questions found.</p>';
+                        }
+                    });
+                }).catch((error) => {
+                    console.error('Error sending reply: ', error);
+                });
+            } else {
+                alert('Please enter a reply.');
+            }
+        }
+
+        const dbRef = ref(db, 'questions/');
+        get(dbRef).then((snapshot) => {
+            if (snapshot.exists()) {
+                displayQuestions(snapshot.val());
+            } else {
+                document.getElementById("questionsList").innerHTML = '<p>No questions found.</p>';
+            }
+        }).catch((error) => {
+            console.error('Error fetching data: ', error);
+        });
+    </script>
+</body>
+
+</html>

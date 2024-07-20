@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Management</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: #f0f0f0;
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+        }
+
+
+        h1 {
+            text-align: center;
+            color: #0056b3;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            font-weight: 600;
+        }
+
+        .container {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            max-width: 400px;
+            width: 100%;
+        }
+
+        .login input[type="text"],
+        .login textarea,
+        .login input[type="button"] {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        .login input[type="button"] {
+            background: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .login input[type="button"]:hover {
+            background: #0056b3;
+        }
+
+        .message {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            font-size: 1.1em;
+        }
+
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <form class="login">
+            <h1>ارسال</h1>
+            <input id="name" type="text" placeholder="الاسم">
+            <textarea id="question" placeholder="السؤال" rows="4"></textarea>
+            <input id="submitBtn" type="button" value="ارسال السؤال">
+        </form>
+        <h1 id="userData"></h1>
+        <div id="message" class="message"></div>
+    </div>
+
+    <script src="script.js"></script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCp8_DNF8OrzBw3gYwxb_VGRGXlzGPSHTU",
+            authDomain: "questions-f3722.firebaseapp.com",
+            projectId: "questions-f3722",
+            storageBucket: "questions-f3722.appspot.com",
+            messagingSenderId: "508624461815",
+            appId: "1:508624461815:web:aa8a49751c9b9fb44698f2"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        function displayMessage(message, type) {
+            const messageDiv = document.getElementById("message");
+            messageDiv.textContent = message;
+            messageDiv.className = `message ${type}`;
+        }
+
+        document.getElementById("submitBtn").addEventListener("click", function (e) {
+            e.preventDefault();
+            const name = document.getElementById("name").value;
+            const question = document.getElementById("question").value;
+
+            if (name && question) {
+                set(ref(db, 'questions/' + name), {
+                    name: name,
+                    question: question
+                }).then(() => {
+                    document.getElementById("userData").textContent = `Question submitted by: ${name}`;
+                    displayMessage('Question submitted successfully!', 'success');
+                    window.location = "./one.html"
+                }).catch((error) => {
+                    console.error('Error submitting question: ', error);
+                    displayMessage('Error submitting question.', 'error');
+                });
+            } else {
+                displayMessage('Please fill out both fields.', 'error');
+            }
+        });
+    </script>
+</body>
+
+</html>
